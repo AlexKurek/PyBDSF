@@ -371,7 +371,7 @@ class Island(object):
         self.total_flux = N.nansum((self.image - bbox_mean_im)[valid_pixels]) / beamarea
 
         pixels_in_isl = N.sum(valid_pixels)
-        self.total_fluxE = func.nanmean(bbox_rms_im[valid_pixels]) * N.sqrt(pixels_in_isl/beamarea)  # Jy
+        self.total_fluxE = N.nanmean(bbox_rms_im[valid_pixels]) * N.sqrt(pixels_in_isl/beamarea)  # Jy
         self.border = self.get_border()
         self.gaul = []
         self.fgaul = []
