@@ -218,21 +218,28 @@ def g2param(g, adj=False):
 
     return params
 
+
 def g2param_err(g, adj=False):
     """Convert errors on gaussian object g to param list [Eamp, Ecenx, Eceny, Esigx, Esigy, Etheta] """
     from .const import fwsig
-    from math import pi
 
     A = g.peak_fluxE
-    if adj and hasattr(g, 'size_pix_adj'):
-        sigx, sigy, th = g.size_pix_adj
+    if adj and hasattr(g, 'size_pix_adj') and hasattr(g, 'size_pix'):
+        scale_x = g.size_pix_adj[0] / g.size_pix[0] if g.size_pix[0] > 0 else 1.0
+        scale_y = g.size_pix_adj[1] / g.size_pix[1] if g.size_pix[1] > 0 else 1.0
+        sigx = g.size_pixE[0] * scale_x
+        sigy = g.size_pixE[1] * scale_y
+        th = g.size_pixE[2]
     else:
         sigx, sigy, th = g.size_pixE
+
     cenx, ceny = g.centre_pixE
-    sigx = sigx/fwsig; sigy = sigy/fwsig
+    sigx = sigx / fwsig
+    sigy = sigy / fwsig
     params = [A, cenx, ceny, sigx, sigy, th]
 
     return params
+
 
 def corrected_size(size):
     """ convert major and minor axis from sigma to fwhm and angle from horizontal to P.A. """
@@ -243,10 +250,9 @@ def corrected_size(size):
     csize[0] = size[0]*fwsig
     csize[1] = size[1]*fwsig
     bpa = size[2]
-    pa = bpa-90.0
-    pa = pa % 360
-    if pa < 0.0: pa = pa + 360.0
-    if pa > 180.0: pa = pa - 180.0
+    # Convert to astronomical P.A. and wrap to [0, 180) degrees
+    # Ellipses are rotationally symmetric by 180°, making orientation > 180° redundant
+    pa = (bpa - 90.0) % 180.0
     csize[2] = pa
 
     return csize
@@ -267,8 +273,12 @@ def drawellipse(g):
     size = [param[3], param[4], param[5]]
     size_fwhm = corrected_size(size)
     th=N.arange(0, 370, 10)
-    x1=size_fwhm[0]*N.cos(th/rad)
-    y1=size_fwhm[1]*N.sin(th/rad)
+
+    # Not dividing those by 2, since the intention is to encircle the area down to the treshold
+    # level, not to the FWHM level
+    x1 = size_fwhm[0] * N.cos(th/rad)
+    y1 = size_fwhm[1] * N.sin(th/rad)
+
     x2=x1*N.cos(param[5]/rad)-y1*N.sin(param[5]/rad)+param[1]
     y2=x1*N.sin(param[5]/rad)+y1*N.cos(param[5]/rad)+param[2]
 
@@ -933,7 +943,7 @@ def fit_mulgaus2d(image, gaus, x, y, mask = None, fitfix = None, err = None, adj
             p, success = leastsq(errorfunction, p_tofit, args=(x, y, p_tofix, ind, image, err, g_ind))
             sys.stdout = original_stdout  # turn STDOUT back on
     else:
-        p, sucess = None, 1
+        p, success = None, 1
 
     para = N.zeros(6*ngaus)
     para[N.where(ind==1)[0]] = p
@@ -1800,11 +1810,9 @@ def isl_tosplit(isl, opts):
     size_extra5 = opts.splitisl_size_extra5
     frac_bigisl3 = opts.splitisl_frac_bigisl3
 
-    connected, count = connect(isl.mask_active)
     index = 0
     n_subisl3, labels3, isl_pixs3 = open_isl(isl.mask_active, 3)
     n_subisl5, labels5, isl_pixs5 = open_isl(isl.mask_active, 5)
-    isl_pixs3, isl_pixs5 = N.array(isl_pixs3), N.array(isl_pixs5)
 
                                 # take open 3 or 5
     open3, open5 = False, False
@@ -1820,8 +1828,6 @@ def isl_tosplit(isl, opts):
     else:
         if open3: index = 3; n_subisl = n_subisl3; labels = labels3
         else: index = 0
-    convex_def =  convexhull_deficiency(isl)
-    #print 'CONVEX = ',convex_def
 
     if opts.plot_islands:
         try:
