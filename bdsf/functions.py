@@ -1734,6 +1734,7 @@ def assign_leftovers(mask, open, nisl, labels):
             for cc in coords:
                 # Convert 'cc' to a tuple to properly index the 2D numpy array
                 mask[tuple(cc)] = True
+            return labels, mask
             
         if len(belongs) == 1:
             for cc in coords:
