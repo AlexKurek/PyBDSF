@@ -934,14 +934,14 @@ class Op_rmsimage(Op):
         return cm, cr
 
 
-    def fill_masked_regions(self, themap, magic=np.inf):
+    def fill_masked_regions(self, themap):
         """Fill masked regions in themap using local median, with global median fallback."""
         # Compute global median as a fallback for finite values
-        valid_mask = np.isfinite(themap) & (themap != magic)
+        valid_mask = np.isfinite(themap)
         global_fallback = np.nanmedian(themap[valid_mask]) if np.any(valid_mask) else 1.0
 
         # Find coordinates of missing or invalid data
-        masked_boxes = np.where((themap == magic) | np.isnan(themap) | np.isinf(themap))
+        masked_boxes = np.where(~np.isfinite(themap))
         max_delx, max_dely = themap.shape[0], themap.shape[1]
 
         for i in range(np.size(masked_boxes, 1)):
@@ -958,7 +958,7 @@ class Op_rmsimage(Op):
 
                 cutout = themap[x1:x2, y1:y2].ravel()
                 # Extract valid finite values
-                goodcutout = cutout[(cutout != magic) & np.isfinite(cutout)]
+                goodcutout = cutout[np.isfinite(cutout)]
                 num_unmasked = len(goodcutout)
 
                 if num_unmasked > 0:
