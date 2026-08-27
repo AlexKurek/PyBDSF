@@ -187,14 +187,14 @@ class Op_rmsimage(Op):
         # The formula finds the diameter 2r where the brightness drops to 3x the noise level
         # (kappa1 * crms). Solving for 2r gives: 2 * sigma * sqrt(2 * ln(I_max / (3 * sigma_noise)))
         try:
-            brightsize = int(round(2.*img.beam[0]/cdelt[0]/fwsig*
-                               sqrt(2.*log(img.max_value/(kappa1*crms)))))
+            brightsize = round(2.*img.beam[0]/abs(cdelt[0])/fwsig*
+                               sqrt(2.*log(img.max_value/(kappa1*crms))))
         # Fallback: 2-sigma beam
         # If the image contains no sources, `img.max_value` might be 
         # smaller than the noise threshold (kappa1 * crms). This would make the fraction < 1, 
         # causing `log()` to return a negative number, and `sqrt()` to raise a math domain error.
         except (ValueError, ZeroDivisionError):
-            brightsize = int(round(2.*img.beam[0]/cdelt[0]/fwsig))
+            brightsize = round(2.*img.beam[0]/abs(cdelt[0])/fwsig)
 
         mylog.info('Estimated size of brightest source (pixels) = '+str(brightsize))
 
@@ -245,7 +245,7 @@ class Op_rmsimage(Op):
         isl_size_highthresh = []
         for idx, s in enumerate(slices):
             isl_area_lowthresh = (labels[s] == idx+1).sum()/img.pixel_beamarea()*2.0
-            isl_maxposn_lowthresh = tuple(np.array(np.unravel_index(np.argmax(image[s]), image[s].shape))+
+            isl_maxposn_lowthresh = tuple(np.array(np.unravel_index(np.nanargmax(image[s]), image[s].shape))+
                                           np.array((s[0].start, s[1].start)))
             isl_size += [s[0].stop-s[0].start, s[1].stop-s[1].start]
             if do_adapt and isl_maxposn_lowthresh in isl_maxposn:
@@ -1036,14 +1036,14 @@ class Op_rmsimage(Op):
                     # First take the same windows for which the mask was calculated
                     # and then select only the unmasked pixels
                     valid_pixels = arr[a:b, c:d][pix_unmasked]
-                    cm = np.median(valid_pixels)
+                    cm = np.nanmedian(valid_pixels)
                     # Calculate standard deviation estimated from Median Absolute Deviation (MAD)
                     # MAD = median(|x - median(x)|). The scale factor for a Gaussian distribution is 1.4826
-                    cr = np.median(np.abs(valid_pixels - cm)) * 1.4826
+                    cr = np.nanmedian(np.abs(valid_pixels - cm)) * 1.4826
                     
                     # Protection against zero noise (e.g. all pixels have the same value)
                     if cr == 0.0:
-                        cr = np.std(valid_pixels) # fallback
+                        cr = np.nanstd(valid_pixels) # fallback
                         if cr == 0.0:
                             cr = np.inf           # finall fallback
                 else: # too few unmasked pixels --> set mean/rms to inf
