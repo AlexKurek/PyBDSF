@@ -493,7 +493,6 @@ class Op_gausfit(Op):
         and iterate. However, this does usually result in larger residuals.
         """
         from . import functions as func
-        from .const import fwsig
         sgaul = []
         sfgaul = []
         gaul = []
@@ -526,8 +525,8 @@ class Op_gausfit(Op):
                     gcopy[1] -= isl.origin[0]
                     gcopy[2] -= isl.origin[1]
                     S1, S2, Th = func.corrected_size(gcopy[3:6])
-                    gcopy[3] = S1 / fwsig
-                    gcopy[4] = S2 / fwsig
+                    gcopy[3] = S1
+                    gcopy[4] = S2
                     gcopy[5] = Th
                     A, C1, C2, S1, S2, Th = gcopy
                     shape = isl.shape
